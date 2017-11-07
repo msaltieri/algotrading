@@ -1,0 +1,10 @@
+Package: algotrading
+Type: Package
+Title: Algorithmic Trading with R
+Authors@R: c(person("Michele Stefano", "Altieri",
+                    email = "msa@hypermynds.com",
+                    role = c("aut", "cre")))
+Description: Machine learning strategies for trading on the financial markets.
+License: file LICENSE
+Encoding: UTF-8
+LazyData: true
