@@ -1,10 +1,19 @@
 Package: algotrading
-Type: Package
+Version: 0.0.1
+Date: 2017-11-07
 Title: Algorithmic Trading with R
 Authors@R: c(person("Michele Stefano", "Altieri",
-                    email = "msa@hypermynds.com",
+                    email = "michelestefano.altieri@gmail.com",
                     role = c("aut", "cre")))
 Description: Machine learning strategies for trading on the financial markets.
+Imports:
+    PerformanceAnalytics,
+    TTR,
+    quantmod,
+    stats,
+    xts,
+    zoo
 License: file LICENSE
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 6.0.1
