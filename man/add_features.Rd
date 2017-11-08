@@ -11,4 +11,8 @@ add_features(data)
 }
 \description{
 This is a function from Quintuitive that adds some features to a time series.
+Actually the automatisms have been completely re-engineered and now all the
+statistics refers to the actual day except for the \code{NEXTDAY} features
+which indicates if the close price in the next trading day has been higher or
+lower than the current price.
 }

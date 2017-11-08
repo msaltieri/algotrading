@@ -6,7 +6,10 @@
 #' Jokes aside, it is the SVM example taken from Järjestelmällinen sijoittaja's
 #' \href{https://jarjestelmallinensijoittaja.wordpress.com/tag/svm/}{article} on
 #' Machine Learning in Time Series Prediction.
+#' @importFrom caret createDataPartition
+#' @importFrom e1071 classAgreement svm tune.svm
 #' @importFrom quantmod getSymbols
+#' @importFrom stats predict
 #' @export
 test1 <- function() {
 
@@ -15,61 +18,156 @@ test1 <- function() {
 
     # Load the ETF on the S&P 500 symbol
     getSymbols("SPY")
-    data <- SPY
-    dataset <- add_features(data)
+    dataset <- add_features(SPY)
+
+    # Split data into training and test set
+    idx <- 1:nrow(dataset)
+    in_training <- createDataPartition(idx, p = 0.75, list = FALSE)
+    training_orig <- dataset[in_training, ]
+    testing_orig <- dataset[-in_training, ]
+
+    # Change objects type into data.frame
+    training <- as.data.frame(training_orig)
+    testing <- as.data.frame(testing_orig)
+    rownames(training) <- rownames(testing) <- NULL
+
+    # Convert result variable into factor
+    training$NEXTDAY <- as.factor(training$NEXTDAY)
+    testing$NEXTDAY <- as.factor(testing$NEXTDAY)
+
+    # Change levels into up and down
+    levels(training$NEXTDAY) <- levels(testing$NEXTDAY) <-
+        list(down = "-1", up = "1")
+
+    # Model tuning
+    obj <- tune.svm(NEXTDAY ~ .,
+                    data = training,
+                    cost = 2^(2:4),
+                    gamma = 2^(-1:1))
+
+    # Training model
+    svm_model <- svm(NEXTDAY ~ .,
+                     data = training,
+                     kernel = "sigmoid",
+                     cost = 10)
+
+    # Prediction step
+    svm_pred <- predict(svm_model, testing[, -ncol(testing)])
+
+    # Evalute results
+    table(pred = svm_pred, true = testing[, ncol(testing)])
+    classAgreement(table(pred = svm_pred, true = testing[, ncol(testing)]))
+
+}
+
+#' Test #2
+#'
+#' This is a test on the gold historical price
+#' @importFrom PerformanceAnalytics charts.PerformanceSummary
+#' @importFrom e1071 svm
+#' @importFrom quantmod getSymbols
+#' @importFrom stats predict
+#' @export
+test2 <- function() {
+
+    # This is to silent the check()
+    GLD <- NULL
+
+    # Ottengo i dati
+    getSymbols("GLD", src = "yahoo", from = "1990-01-01")
+
+    # Agggiungo le statistiche
+    data <- add_features(GLD)
+    daily <- data$RESULT
+    data$RESULT <- NULL
+
+    # Costruisco la strategia
+    learning_period <- 200
+    result <- c()
+
+    for (i in (learning_period+1):(nrow(data) - 2)) {
+        ef_train <- data[(i - learning_period):i, ]
+        r1 <- svm(factor(NEXTDAY) ~ .,
+                  data = ef_train,
+                  cost = 100,
+                  gamma = 0.1)
+        r1_pred <- predict(r1, data[i+1, 1:17])
+        r1_pred <- data.frame(r1_pred)
+
+        if (as.numeric(as.character(r1_pred[1, ])) == data$NEXTDAY[i+1]) {
+            result <- rbind(result, abs(daily[i+1, 1]))
+        } else {
+            result <- rbind(result, -abs(daily[i+1, 1]))
+        }
+
+        if (i %% 200 == 0) {
+            charts.PerformanceSummary(result, ylog = TRUE)
+        }
+    }
 
 }
 
 #' Add Features to Time Series
 #'
 #' This is a function from Quintuitive that adds some features to a time series.
+#' Actually the automatisms have been completely re-engineered and now all the
+#' statistics refers to the actual day except for the \code{NEXTDAY} features
+#' which indicates if the close price in the next trading day has been higher or
+#' lower than the current price.
 #' @param data is an \code{xts} object to which the features have to be added.
 #' @importFrom PerformanceAnalytics apply.rolling kurtosis skewness
 #' @importFrom TTR ROC
 #' @importFrom quantmod Cl Vo
 #' @importFrom stats lag mad sd
-#' @importFrom xts xts
 #' @importFrom zoo na.trim rollmean rollmedian
 #' @export
 add_features <- function(data) {
 
+    # Working with close prices
     close <- Cl(data)
+
+    # Computing rate-of-changes (ROCs) for different periods
+    periods <- c(1, 2, 3, 5, 10, 20, 50, 100, 150, 200)
+    res_roc <- lapply(periods,
+                      function(x) ROC(close,
+                                      type = "discrete",
+                                      n = x))
+    res_roc <- do.call("merge", res_roc)
+    res_roc <- na.trim(res_roc)
+    names(res_roc) <- paste("ROC", periods, sep = ".")
+
+    # Computing rolling averages and other statistics
     returns <- na.trim(ROC(close, type = "discrete"))
+    res_stat <- merge(rollmean(returns,
+                               k = 21,
+                               align = "right"),
+                      rollmedian(returns,
+                                 k = 21,
+                                 align = "right"),
+                      apply.rolling(returns,
+                                    width = 21,
+                                    FUN = sd),
+                      apply.rolling(returns,
+                                    width = 21,
+                                    FUN = mad),
+                      apply.rolling(returns,
+                                    width = 21,
+                                    FUN = skewness,
+                                    align = "right"),
+                      apply.rolling(returns,
+                                    width = 21,
+                                    FUN = kurtosis,
+                                    align = "right"),
+                      Vo(data),
+                      lag(returns, k = -1),
+                      lag(ifelse(returns >= 0, 1, -1), k = -1))
+    res_stat <- na.trim(res_stat)
+    names(res_stat) <- c("MEAN", "MEDIAN", "SD", "MAD", "SKEW", "KURTOSIS",
+                         "VOLUME", "RESULT", "NEXTDAY")
 
-    # n-day returns
-    res <- merge(na.trim(lag(returns, 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 2), 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 3), 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 5), 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 10), 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 20), 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 50), 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 100), 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 150), 1)),
-                 na.trim(lag(ROC(close, type = "discrete", n = 200), 1)),
-                 all = FALSE)
-
-    # other features
-    res <- merge(res,
-                 xts(na.trim(lag(rollmean(returns, k = 21, align = "right"), 1))),
-                 xts(na.trim(lag(rollmedian(returns, k = 21, align = "right"), 1))),
-                 xts(na.trim(lag(apply.rolling(returns, width = 21, FUN = sd), 1))),
-                 xts(na.trim(lag(apply.rolling(returns, width = 21, FUN = mad), 1))),
-                 xts(na.trim(lag(apply.rolling(returns, width = 21, align = "right", FUN = skewness), 1))),
-                 xts(na.trim(lag(apply.rolling(returns, width = 21, align = "right", FUN = kurtosis), 1))),
-                 all = FALSE)
-
-    # add volume
-    res <- merge(res, xts(na.trim(lag(Vo(data), 2))), all = FALSE)
-
-    # add result column
-    nextday <- ifelse(returns >= 0, 1, -1) # 1 if next day higher, 0 otherwise
-    res <- merge(res, nextday, all = FALSE)
-
-    colnames(res) <- c("ROC.1", "ROC.2", "ROC.3", "ROC.5", "ROC.10", "ROC.20",
-                       "ROC.50", "ROC.100", "ROC.150", "ROC.200", "MEAN",
-                       "MEDIAN", "SD", "MAD", "SKEW", "KURTOSIS", "VOLUME",
-                       "NEXTDAY")
+    # Unisco i pezzi e ritorno il risultato
+    res <- merge(res_roc, res_stat)
+    res <- na.trim(res)
     return(res)
 
 }

@@ -9,9 +9,10 @@ Description: Machine learning strategies for trading on the financial markets.
 Imports:
     PerformanceAnalytics,
     TTR,
+    caret,
+    e1071,
     quantmod,
     stats,
-    xts,
     zoo
 License: file LICENSE
 Encoding: UTF-8

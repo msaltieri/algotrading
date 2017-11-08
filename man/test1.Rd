@@ -10,3 +10,8 @@ test1()
 This is a test function that launches some test code to test if this project
 has any sense.
 }
+\details{
+Jokes aside, it is the SVM example taken from Järjestelmällinen sijoittaja's
+\href{https://jarjestelmallinensijoittaja.wordpress.com/tag/svm/}{article} on
+Machine Learning in Time Series Prediction.
+}
