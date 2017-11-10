@@ -107,6 +107,79 @@ test2 <- function() {
 
 }
 
+#' Test #3
+#'
+#' Testing svm with more interesting features
+#' @importFrom PerformanceAnalytics charts.PerformanceSummary
+#' @importFrom TTR RSI
+#' @importFrom e1071 svm
+#' @importFrom quantmod Cl getSymbols
+#' @importFrom splines ns
+#' @importFrom stats lm
+#' @export
+test3 <- function() {
+
+    # This to silent the check()
+    GLD <- NULL
+
+    # Ottengo i dati
+    getSymbols("GLD", src = "yahoo", from = "1990-01-01")
+    data <- GLD
+
+    # Aggancio l'RSI
+    data <- na.trim(merge(data, RSI(Cl(data))))
+    names(data)[7] <- "RSI"
+
+    # Aggiuno la spline sull'RSI (sto barando!!)
+    fit <- lm(data$RSI ~ ns(1:nrow(data), df = floor(nrow(data) / 4)))
+    data <- merge(data, predict(fit, data.frame(p = 1:nrow(data))))
+    names(data)[8] <- "Spline"
+
+    # Aggiungo il ritorno del giorno dopo
+    data <- na.trim(merge(data, lag(ROC(Cl(data), type = "discrete"), -1)))
+    names(data)[9] <- "NextDay"
+
+    # Costruisco la strategia
+    learning_period <- 200
+    threshold <- 0.1 / 100
+    result <- NULL
+
+    for (i in (learning_period+1):(nrow(data) - 2)) {
+
+        ef_train <- data[(i - learning_period):i, ]
+
+        r1 <- svm(NextDay ~ .,
+                  data = ef_train,
+                  cost = 100,
+                  gamma = 0.1)
+        r1_pred <- predict(r1, data[i+1, -ncol(data)])
+
+        # r1 <- nnet(ef_train[, -ncol(data)],
+        #            ef_train[, ncol(data)],
+        #            size = 6,
+        #            skip = TRUE,
+        #            maxit = 10^4,
+        #            decay = 10^(-2),
+        #            trace = FALSE,
+        #            linout = TRUE)
+        # r1_pred <- predict(r1, data[i+1, -ncol(data)])
+
+        trigger <- ifelse(abs(r1_pred) > threshold, "go", "dont")
+
+        value <- abs(data$NextDay[i+1])
+        if (sign(r1_pred) != sign(data$NextDay[i+1]))
+            value <- -value
+        if (trigger == "dont")
+            value$NextDay <- 0
+
+        result <- rbind(result, value)
+
+    }
+
+    charts.PerformanceSummary(result)
+
+}
+
 #' Add Features to Time Series
 #'
 #' This is a function from Quintuitive that adds some features to a time series.
