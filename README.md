@@ -1,7 +1,7 @@
 algotrading - A library for algorithmic trading with R
 ======================================================
 
-> *Licensed under the MIT license.
+> *Licensed under the MIT license.*
 
 `algotrading` lets you easily build and backtest trading strategies using
 machine learning and other algorithmic and data-driven instruments.
