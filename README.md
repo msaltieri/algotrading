@@ -1,6 +1,8 @@
 algotrading - A library for algorithmic trading with R
 ======================================================
 
+[![Build Status](https://travis-ci.org/msaltieri/algotrading.svg?branch=master)](https://travis-ci.org/msaltieri/algotrading)
+
 > *Licensed under the MIT license.*
 
 `algotrading` lets you easily build and backtest trading strategies using
