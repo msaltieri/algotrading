@@ -189,91 +189,14 @@ test3 <- function() {
 #' @param upper is the RSI level requested to trigger the long trade.
 #' @param epsilon is the tolerance to avoid closing a position too early.
 #' @importFrom TTR RSI
+#' @importFrom quantmod Cl Op
+#' @importFrom zoo na.trim
 #' @export
 trade_rsi <- function(series, lower = 30, upper = 70, epsilon = 5/100) {
 
     # Adding the RSI to the original time series
     series <- na.trim(merge(series, RSI(Cl(series))))
     names(series)[ncol(series)] <- "RSI"
-
-    # Initializing the trade repository
-    trade_repo <- NULL
-    actual_deal <- NULL
-
-    # Cycling on each available trade day
-    n <- nrow(series)
-    for (i in 1:(n - 1)) {
-
-        # Check if the upper limit has been up violated
-        if (is.null(actual_deal) & series$RSI[[i]] >= upper) {
-
-            # Creating a new deal at the open price of the following day
-            actual_deal <- data.frame(side = "buy",
-                                      open_date = time(series)[i + 1],
-                                      open_price = Op(series)[[i + 1]],
-                                      close_date = as.Date(NA),
-                                      close_price = as.numeric(NA))
-            next
-        }
-
-        # Check if the upper limit has been down violated
-        if (!is.null(actual_deal) &&
-            actual_deal$side == "buy" &&
-            series$RSI[[i]] <= upper * (1 - epsilon)) {
-
-            # Closing the open deal at the close price of the day
-            actual_deal$close_date <- time(series)[i]
-            actual_deal$close_price <- Cl(series)[[i]]
-            trade_repo <- rbind(trade_repo, actual_deal)
-            actual_deal <- NULL
-            next
-        }
-
-        # Check if the lower limit has been down violated
-        if (is.null(actual_deal) & series$RSI[[i]] <= lower) {
-
-            # Creating a new deal at the open price of the following day
-            actual_deal <- data.frame(side = "sell",
-                                      open_date = time(series)[i + 1],
-                                      open_price = Op(series)[[i + 1]],
-                                      close_date = as.Date(NA),
-                                      close_price = as.numeric(NA))
-            next
-        }
-
-        # Check if the lower limit has been up violated
-        if (!is.null(actual_deal) &&
-            actual_deal$side == "sell" &&
-            series$RSI[[i]] <= lower) {
-
-            # Closing the open deal at the close price of the day
-            actual_deal$close_date <- time(series)[i]
-            actual_deal$close_price <- Cl(series)[[i]]
-            trade_repo <- rbind(trade_repo, actual_deal)
-            actual_deal <- NULL
-            next
-        }
-
-    }
-
-    # If I still have an open deal, I put it in the repo
-    trade_repo <- rbind(trade_repo, actual_deal)
-
-}
-
-#' MACD Trading Signal
-#'
-#' This is a strategy for long/short positioning according to the fact that MACD
-#' change sign (negative to positive means buy, positive to negative means
-#' sell).
-#' @param series is a \code{xts} object representing the OHLC object as
-#' retrieved using \code{getSymbols}.
-#' @importFrom TTR MACD
-#' @export
-trade_rsi <- function(series) {
-
-    # Adding the MACD to the original time series
-    series <- na.trim(merge(series, MACD(Cl(series))))
 
     # Initializing the trade repository
     trade_repo <- NULL

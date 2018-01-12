@@ -71,6 +71,8 @@ add_features <- function(data) {
 #' added.
 #' @param n is the number of points for which the linear trend is suspected to
 #' exist.
+#' @import xts
+#' @importFrom stats time
 #' @export
 add_linear_trend <- function(data, n = 10) {
 

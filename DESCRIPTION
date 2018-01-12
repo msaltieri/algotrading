@@ -8,11 +8,13 @@ Authors@R: c(person("Michele Stefano", "Altieri",
 Description: Machine learning strategies for trading on the financial markets.
 Imports:
     PerformanceAnalytics,
+    R6,
     TTR,
     caret,
     e1071,
     quantmod,
     stats,
+    xts,
     zoo
 License: file LICENSE
 Encoding: UTF-8
