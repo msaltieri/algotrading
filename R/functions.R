@@ -62,3 +62,38 @@ add_features <- function(data) {
     return(res)
 
 }
+
+#' Add Future Linear Trend
+#'
+#' This function adds to each point of a time series object the actual linear
+#' trend in the immediate future.
+#' @param data is an \code{xts} object to which the linear trend has to be
+#' added.
+#' @param n is the number of points for which the linear trend is suspected to
+#' exist.
+#' @export
+add_linear_trend <- function(data, n = 10) {
+
+    # Working with close prices
+    close <- Cl(data)
+
+    # Bulding the rolling linear regression
+    n_max <- nrow(close) - n - 1
+    slopes <- lapply(1:n_max,
+                     function(i) {
+                         close_ss <- data.frame(id = 1:n,
+                                                value = as.vector(close[(i+1):(i+n)]))
+                         fit <- lm(value ~ id,
+                                   data = close_ss)
+                         return(as.vector(fit$coefficients[2]))
+                     })
+    slopes <- xts(x = unlist(slopes),
+                  order.by = time(close[1:n_max]))
+    names(slopes) <- "Slopes"
+
+    # Adding the linear regression slopes to the original dataset
+    res <- merge(data, slopes)
+    res <- na.trim(res)
+    return(res)
+
+}
