@@ -30,7 +30,8 @@ Collaboration
 </h2>
 
 Please refer to [this page](https://github.com/ideaconsult/etc/wiki/GitHub-Collaboration-Best-Practices)
-to find the best practices for collaboration in GitHub projects. These best
-practices are to be used when collaborating on this project.
+to find the best practices for collaboration in GitHub projects. These best practices are to be used when collaborating on this project.
 
 In particular, please refer to [this cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/03/devtools-cheatsheet.pdf) to understand how an `R` package works and which is the development workflow.
+
+I also suggest to take a look at the RStudio [cheatsheets page](https://www.rstudio.com/resources/cheatsheets/) where a lot of tips and tricks on the RStudio IDE and basic R structures are available.
