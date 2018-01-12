@@ -23,7 +23,7 @@ Installation
 latest development version from GitHub:
 
     install.packages("devtools")
-    devtools::install_github("msaltieri/passport")
+    devtools::install_github("msaltieri/algotrading")
 
 <h2 id="collab">
 Collaboration
